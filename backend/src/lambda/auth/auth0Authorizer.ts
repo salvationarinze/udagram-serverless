@@ -52,24 +52,25 @@ export const handler = async (
 }
 
  async function verifyToken(authHeader: string): Promise<JwtPayload> {
-  const token = getToken(authHeader)
-  const jwt: Jwt = decode(token, { complete: true }) as Jwt
+   const token = getToken(authHeader)
+   const jwt: Jwt = decode(token, { complete: true }) as Jwt
+   const kid = jwt.header.kid
+   let cert
 
-  if(!jwt){
-    throw new Error('invalid token')
-  }
+   try {
+     const jwks = await Axios.get(jwksUrl)
+     const signingKey = jwks.data.keys.find(k => k.kid === kid)
 
-  try {
-    const response = await Axios.get(jwksUrl);
-    console.log(response);
-    var verifedToken = verify(token,response.data,{algorithms:['RS256']})
+     if (!signingKey) {
+       throw new Error(`No signing key matching the kid '${kid}' was found`);
+     }
 
-    console.log('verfied toekn',verifedToken)
-    return  verifedToken as JwtPayload
-  } catch (error) {
-    console.error(error);
-    return undefined
-  }
+     cert = `-----BEGIN CERTIFICATE-----\n${signingKey.x5c[0]}\n-----END CERTIFICATE-----`
+   } catch (e) {
+     logger.error('Failed to retrieve auth0 certificate', { error: e.message })
+   }
+
+   return verify(token, cert, { algorithms: ['RS256'] }) as JwtPayload
 }
 
 function getToken(authHeader: string): string {
