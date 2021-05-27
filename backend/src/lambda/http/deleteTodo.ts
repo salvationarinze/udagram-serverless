@@ -15,7 +15,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         logger.error('invalid delete attempt without todo id')
         return apiResponseHelper.generateErrorResponse(400,'invalid parameters')
     }
- 
+
     const authHeader = event.headers['Authorization']
     const userId = getUserId(authHeader)
 
@@ -31,8 +31,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     }
 
     logger.info(`User ${userId} deleting todo ${todoId}`)
-    await todosAccess.deleteTodoById(todoId)
+
+
+    await todosAccess.deleteTodoById(userId, todoId)
     return apiResponseHelper.generateEmptySuccessResponse(204)
 
-  
+
 }
